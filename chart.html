@@ -5,74 +5,105 @@
     <style>
         body { 
             margin:0; 
-            padding:20px; 
-            background:#f8f9fa; 
-            font-family:Arial;
+            padding:24px; 
+            background:#ffffff; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             height: 100vh;
             overflow: hidden;
+            color: #333;
         }
         .container { 
             text-align:center; 
-            width: 250px; 
-            height: 300px;
+            width: 280px; 
             margin:0 auto; 
-            position: relative;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         #chartContainer {
-            width: 200px;
-            height: 200px;
-            margin: 0 auto;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 16px auto;
             position: relative;
         }
         #chart { 
-            width: 200px !important;
-            height: 200px !important;
-        }
-        .percentage { 
-            font-size:20px; 
-            font-weight:bold; 
-            margin-top:10px; 
-            color:#333; 
+            width: 160px !important;
+            height: 160px !important;
         }
         .spool-info { 
-            font-size:14px; 
-            color:#666; 
-            margin-top:5px; 
+            font-size: 14px; 
+            font-weight: 600;
+            color: #333; 
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+        .percentage { 
+            font-size: 28px; 
+            font-weight: 700; 
+            color: #333; 
+            margin-bottom: 4px;
+            letter-spacing: -0.02em;
+        }
+        .remaining-text {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .weight-info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="spool-info" id="spoolInfo">Loading...</div>
         <div id="chartContainer">
             <canvas id="chart"></canvas>
         </div>
-        <div class="percentage" id="percentText">Loading...</div>
-        <div class="spool-info" id="spoolInfo"></div>
+        <div class="percentage" id="percentText">---%</div>
+        <div class="remaining-text">REMAINING</div>
+        <div class="weight-info" id="weightInfo"></div>
     </div>
     
     <script>
-        // Wait for page to fully load
         window.addEventListener('load', function() {
-            // Get parameters from URL
             const urlParams = new URLSearchParams(window.location.search);
             const percentage = parseFloat(urlParams.get('percent')) || 0;
             const spoolId = urlParams.get('spool') || 'Unknown';
+            const brand = urlParams.get('brand') || '';
+            const weight = urlParams.get('weight') || '';
+            
             const remaining = 100 - percentage;
             
-            // Update text displays
-            document.getElementById('percentText').textContent = percentage.toFixed(1) + '% Remaining';
-            document.getElementById('spoolInfo').textContent = 'Spool: ' + spoolId;
+            // Update displays
+            document.getElementById('spoolInfo').textContent = spoolId + (brand ? ' • ' + brand : '');
+            document.getElementById('percentText').textContent = percentage.toFixed(1) + '%';
             
-            // Create doughnut chart with fixed sizing
+            if (weight) {
+                document.getElementById('weightInfo').textContent = weight + 'g remaining';
+            }
+            
+            // Chart colors based on percentage
+            let fillColor = '#10B981'; // Green
+            if (percentage < 30) fillColor = '#EF4444'; // Red
+            else if (percentage < 50) fillColor = '#F59E0B'; // Orange
+            
             const ctx = document.getElementById('chart').getContext('2d');
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     datasets: [{
                         data: [percentage, remaining],
-                        backgroundColor: ['#4CAF50', '#E0E0E0'],
+                        backgroundColor: [fillColor, '#F3F4F6'],
                         borderWidth: 0,
-                        cutout: '70%'
+                        cutout: '75%'
                     }]
                 },
                 options: {
@@ -82,9 +113,7 @@
                         legend: { display: false },
                         tooltip: { enabled: false }
                     },
-                    animation: {
-                        duration: 0
-                    }
+                    animation: { duration: 0 }
                 }
             });
         });
