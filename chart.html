@@ -3,51 +3,90 @@
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        body { margin:0; padding:20px; background:#f8f9fa; font-family:Arial; }
-        .container { text-align:center; max-width:300px; margin:0 auto; }
-        #chart { margin:0 auto; }
-        .percentage { font-size:24px; font-weight:bold; margin-top:15px; color:#333; }
-        .spool-info { font-size:16px; color:#666; margin-top:10px; }
+        body { 
+            margin:0; 
+            padding:20px; 
+            background:#f8f9fa; 
+            font-family:Arial;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container { 
+            text-align:center; 
+            width: 250px; 
+            height: 300px;
+            margin:0 auto; 
+            position: relative;
+        }
+        #chartContainer {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            position: relative;
+        }
+        #chart { 
+            width: 200px !important;
+            height: 200px !important;
+        }
+        .percentage { 
+            font-size:20px; 
+            font-weight:bold; 
+            margin-top:10px; 
+            color:#333; 
+        }
+        .spool-info { 
+            font-size:14px; 
+            color:#666; 
+            margin-top:5px; 
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <canvas id="chart" width="200" height="200"></canvas>
-        <div class="percentage" id="percentText"></div>
+        <div id="chartContainer">
+            <canvas id="chart"></canvas>
+        </div>
+        <div class="percentage" id="percentText">Loading...</div>
         <div class="spool-info" id="spoolInfo"></div>
     </div>
     
     <script>
-        // Get parameters from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const percentage = parseFloat(urlParams.get('percent')) || 0;
-        const spoolId = urlParams.get('spool') || 'Unknown';
-        const remaining = 100 - percentage;
-        
-        // Update text displays
-        document.getElementById('percentText').textContent = percentage.toFixed(1) + '% Remaining';
-        document.getElementById('spoolInfo').textContent = 'Spool: ' + spoolId;
-        
-        // Create doughnut chart
-        const ctx = document.getElementById('chart').getContext('2d');
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [percentage, remaining],
-                    backgroundColor: ['#4CAF50', '#E0E0E0'],
-                    borderWidth: 0,
-                    cutout: '75%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
+        // Wait for page to fully load
+        window.addEventListener('load', function() {
+            // Get parameters from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const percentage = parseFloat(urlParams.get('percent')) || 0;
+            const spoolId = urlParams.get('spool') || 'Unknown';
+            const remaining = 100 - percentage;
+            
+            // Update text displays
+            document.getElementById('percentText').textContent = percentage.toFixed(1) + '% Remaining';
+            document.getElementById('spoolInfo').textContent = 'Spool: ' + spoolId;
+            
+            // Create doughnut chart with fixed sizing
+            const ctx = document.getElementById('chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [percentage, remaining],
+                        backgroundColor: ['#4CAF50', '#E0E0E0'],
+                        borderWidth: 0,
+                        cutout: '70%'
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    animation: {
+                        duration: 0
+                    }
                 }
-            }
+            });
         });
     </script>
 </body>
