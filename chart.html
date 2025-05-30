@@ -1,63 +1,135 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v2.1 -->
+    <!-- MRP Chart Component v3.0 - Multi-Layout -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
             margin:0; 
-            padding:24px; 
+            padding:0; 
             background:#ffffff; 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            height: 100vh;
             overflow: hidden;
             color: #333;
         }
-        .container { 
+
+        /* Layout: Full Card (default) */
+        .layout-full {
+            padding: 24px;
+            height: 100vh;
+        }
+        .layout-full .container { 
             text-align:center; 
-            width: 210px; /* Reduced to 75% of 280px */
+            width: 210px;
             margin:0 auto; 
             background: #ffffff;
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25); /* Darker shadow */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }
-        #chartContainer {
+        .layout-full #chartContainer {
             width: 130px;
             height: 130px;
             margin: 0 auto 16px auto;
-            position: relative;
         }
-        #chart { 
-            width: 130px !important;
-            height: 130px !important;
+
+        /* Layout: Chart Only */
+        .layout-chart-only {
+            padding: 8px;
+            height: 100vh;
         }
+        .layout-chart-only .container { 
+            text-align:center; 
+            width: 120px;
+            margin:0 auto; 
+            background: transparent;
+            padding: 0;
+        }
+        .layout-chart-only #chartContainer {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+        }
+        .layout-chart-only .spool-info,
+        .layout-chart-only .percentage,
+        .layout-chart-only .remaining-text,
+        .layout-chart-only .weight-info { display: none; }
+
+        /* Layout: Compact */
+        .layout-compact {
+            padding: 12px;
+            height: 100vh;
+        }
+        .layout-compact .container { 
+            text-align:center; 
+            width: 160px;
+            margin:0 auto; 
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .layout-compact #chartContainer {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 8px auto;
+        }
+        .layout-compact .spool-info { font-size: 12px; margin-bottom: 4px; }
+        .layout-compact .percentage { font-size: 20px; margin-bottom: 2px; }
+        .layout-compact .remaining-text { font-size: 10px; }
+        .layout-compact .weight-info { font-size: 10px; margin-top: 6px; padding-top: 6px; }
+
+        /* Layout: Dashboard */
+        .layout-dashboard {
+            padding: 8px;
+            height: 100vh;
+        }
+        .layout-dashboard .container { 
+            display: flex;
+            align-items: center;
+            width: 200px;
+            margin:0 auto; 
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        .layout-dashboard #chartContainer {
+            width: 60px;
+            height: 60px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .layout-dashboard .info-section {
+            text-align: left;
+            flex: 1;
+        }
+        .layout-dashboard .spool-info { font-size: 11px; margin-bottom: 2px; }
+        .layout-dashboard .percentage { font-size: 18px; margin-bottom: 0px; }
+        .layout-dashboard .remaining-text { font-size: 9px; }
+        .layout-dashboard .weight-info { display: none; }
+
+        /* Common styles */
+        #chart { width: 100% !important; height: 100% !important; }
+        
         .spool-info { 
-            font-size: 14px; 
             font-weight: 600;
             color: #333; 
-            margin-bottom: 8px;
             letter-spacing: -0.01em;
         }
         .percentage { 
-            font-size: 28px; 
             font-weight: 700; 
             color: #333; 
-            margin-bottom: 4px;
             letter-spacing: -0.02em;
         }
         .remaining-text {
-            font-size: 13px;
             color: #666;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .weight-info {
-            font-size: 12px;
             color: #888;
-            margin-top: 12px;
-            padding-top: 12px;
             border-top: 1px solid #f0f0f0;
         }
         .version {
@@ -75,11 +147,13 @@
         <div id="chartContainer">
             <canvas id="chart"></canvas>
         </div>
-        <div class="percentage" id="percentText">---%</div>
-        <div class="remaining-text">REMAINING</div>
-        <div class="weight-info" id="weightInfo"></div>
+        <div class="info-section">
+            <div class="percentage" id="percentText">---%</div>
+            <div class="remaining-text">REMAINING</div>
+            <div class="weight-info" id="weightInfo"></div>
+        </div>
     </div>
-    <div class="version">v2.1</div>
+    <div class="version">v3.0</div>
     
     <script>
         window.addEventListener('load', function() {
@@ -88,7 +162,11 @@
             const spoolId = urlParams.get('spool') || 'Unknown';
             const brand = urlParams.get('brand') || '';
             const weight = urlParams.get('weight') || '';
-            const hexColor = urlParams.get('color') || ''; // New parameter for hex color
+            const hexColor = urlParams.get('color') || '';
+            const layout = urlParams.get('layout') || 'full'; // New layout parameter
+            
+            // Apply layout class to body
+            document.body.className = 'layout-' + layout;
             
             const remaining = 100 - percentage;
             
@@ -101,12 +179,15 @@
             }
             
             // Determine fill color
-            let fillColor = '#000000'; // Default black
-            
+            let fillColor = '#000000';
             if (hexColor && hexColor.trim() !== '') {
-                // Use provided hex color (ensure it starts with #)
                 fillColor = hexColor.startsWith('#') ? hexColor : '#' + hexColor;
             }
+            
+            // Adjust cutout based on layout
+            let cutoutPercent = '20%';
+            if (layout === 'chart-only' || layout === 'compact') cutoutPercent = '30%';
+            if (layout === 'dashboard') cutoutPercent = '40%';
             
             const ctx = document.getElementById('chart').getContext('2d');
             new Chart(ctx, {
@@ -116,7 +197,7 @@
                         data: [percentage, remaining],
                         backgroundColor: [fillColor, '#F3F4F6'],
                         borderWidth: 0,
-                        cutout: '20%' // Reduced from 75% to make doughnut much thicker
+                        cutout: cutoutPercent
                     }]
                 },
                 options: {
