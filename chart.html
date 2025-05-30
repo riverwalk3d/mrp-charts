@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.7 - Fixed Multi-Color Rings + Square Card -->
+    <!-- MRP Chart Component v4.8 - Fixed Concentric Ring Logic -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -35,7 +35,7 @@
         .layout-chart-only .weight-text,
         .layout-chart-only .remaining-text { display: none; }
 
-        /* Layout: Compact (DEFAULT) - FIXED TO SQUARE */
+        /* Layout: Compact (DEFAULT) */
         .layout-compact {
             padding: 12px;
             height: 100vh;
@@ -43,7 +43,7 @@
         .layout-compact .container { 
             text-align:center; 
             width: 160px;
-            height: 160px; /* Fixed: was missing height, made square */
+            height: 160px;
             margin:0 auto; 
             background: #ffffff;
             border-radius: 8px;
@@ -71,7 +71,7 @@
             display: flex;
             align-items: center;
             width: 200px;
-            height: 80px; /* Fixed height for consistency */
+            height: 80px;
             margin:0 auto; 
             background: #ffffff;
             border-radius: 8px;
@@ -124,7 +124,7 @@
             <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.7</div>
+    <div class="version">v4.8</div>
     
     <script>
         // Color interpolation function
@@ -173,59 +173,54 @@
             }
             
             // Adjust cutout based on layout
-            let baseCutout = 30;
-            if (layout === 'chart-only') baseCutout = 30;
-            if (layout === 'dashboard') baseCutout = 40;
+            let baseCutout = 20; // Reduced to give more space for rings
+            if (layout === 'chart-only') baseCutout = 20;
+            if (layout === 'dashboard') baseCutout = 30;
             
             const canvas = document.getElementById('chart');
             const ctx = canvas.getContext('2d');
             
             if (colorType === 'multi' && color1 && color2) {
-                // Concentric Rings - Fixed Implementation
+                // Concentric Rings - COMPLETELY REWRITTEN
                 const c1 = color1.startsWith('#') ? color1 : '#' + color1;
                 const c2 = color2.startsWith('#') ? color2 : '#' + color2;
                 const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : null;
                 
                 const datasets = [];
                 
-                // Calculate ring thicknesses (equal width rings)
+                // Calculate ring positions
                 const totalThickness = 100 - baseCutout;
                 const numRings = c3 ? 3 : 2;
                 const ringWidth = totalThickness / numRings;
                 
-                // Background ring (gray remaining portion)
+                // IMPORTANT: Add datasets in reverse order (innermost first)
+                // This ensures proper layering in Chart.js
+                
+                // Ring 3 (Innermost - Color3) - if available
+                if (c3) {
+                    datasets.push({
+                        data: [percentage, remaining],
+                        backgroundColor: [c3, '#F3F4F6'],
+                        borderWidth: 0,
+                        cutout: (baseCutout + ringWidth * 2) + '%'
+                    });
+                }
+                
+                // Ring 2 (Middle - Color2)
                 datasets.push({
                     data: [percentage, remaining],
-                    backgroundColor: ['transparent', '#F3F4F6'],
+                    backgroundColor: [c2, '#F3F4F6'],
                     borderWidth: 0,
-                    cutout: baseCutout + '%'
+                    cutout: (baseCutout + ringWidth) + '%'
                 });
                 
                 // Ring 1 (Outermost - Color1)
                 datasets.push({
                     data: [percentage, remaining],
-                    backgroundColor: [c1, 'transparent'],
+                    backgroundColor: [c1, '#F3F4F6'],
                     borderWidth: 0,
                     cutout: baseCutout + '%'
                 });
-                
-                // Ring 2 (Middle - Color2)
-                datasets.push({
-                    data: [percentage, remaining],
-                    backgroundColor: [c2, 'transparent'],
-                    borderWidth: 0,
-                    cutout: (baseCutout + ringWidth) + '%'
-                });
-                
-                // Ring 3 (Innermost - Color3) if available
-                if (c3) {
-                    datasets.push({
-                        data: [percentage, remaining],
-                        backgroundColor: [c3, 'transparent'],
-                        borderWidth: 0,
-                        cutout: (baseCutout + ringWidth * 2) + '%'
-                    });
-                }
                 
                 new Chart(ctx, {
                     type: 'doughnut',
