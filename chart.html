@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.6 - Fixed 2-Color Gradient -->
+    <!-- MRP Chart Component v4.7 - Fixed Multi-Color Rings + Square Card -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -20,7 +20,8 @@
         }
         .layout-chart-only .container { 
             text-align:center; 
-            width: 120px;
+            width: 100px;
+            height: 100px;
             margin:0 auto; 
             background: transparent;
             padding: 0;
@@ -34,7 +35,7 @@
         .layout-chart-only .weight-text,
         .layout-chart-only .remaining-text { display: none; }
 
-        /* Layout: Compact (DEFAULT) */
+        /* Layout: Compact (DEFAULT) - FIXED TO SQUARE */
         .layout-compact {
             padding: 12px;
             height: 100vh;
@@ -42,11 +43,15 @@
         .layout-compact .container { 
             text-align:center; 
             width: 160px;
+            height: 160px; /* Fixed: was missing height, made square */
             margin:0 auto; 
             background: #ffffff;
             border-radius: 8px;
             padding: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .layout-compact #chartContainer {
             width: 80px;
@@ -66,6 +71,7 @@
             display: flex;
             align-items: center;
             width: 200px;
+            height: 80px; /* Fixed height for consistency */
             margin:0 auto; 
             background: #ffffff;
             border-radius: 8px;
@@ -118,7 +124,7 @@
             <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.6</div>
+    <div class="version">v4.7</div>
     
     <script>
         // Color interpolation function
@@ -174,13 +180,74 @@
             const canvas = document.getElementById('chart');
             const ctx = canvas.getContext('2d');
             
-            if (colorType === 'gradient' && color1 && color2) {
-                // Create smooth gradient using many small segments
+            if (colorType === 'multi' && color1 && color2) {
+                // Concentric Rings - Fixed Implementation
                 const c1 = color1.startsWith('#') ? color1 : '#' + color1;
                 const c2 = color2.startsWith('#') ? color2 : '#' + color2;
                 const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : null;
                 
-                const numSegments = 40; // Increased for smoother gradient
+                const datasets = [];
+                
+                // Calculate ring thicknesses (equal width rings)
+                const totalThickness = 100 - baseCutout;
+                const numRings = c3 ? 3 : 2;
+                const ringWidth = totalThickness / numRings;
+                
+                // Background ring (gray remaining portion)
+                datasets.push({
+                    data: [percentage, remaining],
+                    backgroundColor: ['transparent', '#F3F4F6'],
+                    borderWidth: 0,
+                    cutout: baseCutout + '%'
+                });
+                
+                // Ring 1 (Outermost - Color1)
+                datasets.push({
+                    data: [percentage, remaining],
+                    backgroundColor: [c1, 'transparent'],
+                    borderWidth: 0,
+                    cutout: baseCutout + '%'
+                });
+                
+                // Ring 2 (Middle - Color2)
+                datasets.push({
+                    data: [percentage, remaining],
+                    backgroundColor: [c2, 'transparent'],
+                    borderWidth: 0,
+                    cutout: (baseCutout + ringWidth) + '%'
+                });
+                
+                // Ring 3 (Innermost - Color3) if available
+                if (c3) {
+                    datasets.push({
+                        data: [percentage, remaining],
+                        backgroundColor: [c3, 'transparent'],
+                        borderWidth: 0,
+                        cutout: (baseCutout + ringWidth * 2) + '%'
+                    });
+                }
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { datasets: datasets },
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        },
+                        animation: { duration: 0 }
+                    }
+                });
+                
+            } else if (colorType === 'gradient' && color1 && color2) {
+                // Gradient (working from v4.6)
+                const c1 = color1.startsWith('#') ? color1 : '#' + color1;
+                const c2 = color2.startsWith('#') ? color2 : '#' + color2;
+                const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : null;
+                
+                const numSegments = 40;
                 const segmentSize = percentage / numSegments;
                 const data = [];
                 const colors = [];
@@ -190,25 +257,20 @@
                     
                     let color;
                     if (c3) {
-                        // 3-color gradient (working correctly)
                         if (i < numSegments / 2) {
-                            // First half: color1 to color2
                             const factor = (i / (numSegments / 2));
                             color = interpolateColor(c1, c2, factor);
                         } else {
-                            // Second half: color2 to color3
                             const factor = ((i - numSegments / 2) / (numSegments / 2));
                             color = interpolateColor(c2, c3, factor);
                         }
                     } else {
-                        // 2-color gradient - FIXED calculation
                         const factor = i / (numSegments - 1);
                         color = interpolateColor(c1, c2, factor);
                     }
                     colors.push(color);
                 }
                 
-                // Add remaining portion
                 data.push(remaining);
                 colors.push('#F3F4F6');
                 
