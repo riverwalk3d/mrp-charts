@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.0 - Multi-Color Support -->
+    <!-- MRP Chart Component v4.1 - Fixed Gradients & Concentric Rings -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -31,7 +31,7 @@
             margin: 0 auto;
         }
         .layout-chart-only .spool-info,
-        .layout-chart-only .percentage,
+        .layout-chart-only .weight-text,
         .layout-chart-only .remaining-text,
         .layout-chart-only .weight-info { display: none; }
 
@@ -55,8 +55,8 @@
             margin: 0 auto 8px auto;
         }
         .layout-compact .spool-info { font-size: 12px; margin-bottom: 4px; }
-        .layout-compact .percentage { font-size: 20px; margin-bottom: 2px; }
-        .layout-compact .weight-info { font-size: 10px; margin-top: 4px; }
+        .layout-compact .weight-text { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+        .layout-compact .remaining-text { font-size: 10px; color: #666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Layout: Dashboard */
         .layout-dashboard {
@@ -84,8 +84,8 @@
             flex: 1;
         }
         .layout-dashboard .spool-info { font-size: 11px; margin-bottom: 2px; }
-        .layout-dashboard .percentage { font-size: 18px; margin-bottom: 0px; }
-        .layout-dashboard .weight-info { font-size: 9px; margin-top: 2px; }
+        .layout-dashboard .weight-text { font-size: 16px; font-weight: 700; margin-bottom: 0px; }
+        .layout-dashboard .remaining-text { font-size: 8px; color: #666; font-weight: 500; text-transform: uppercase; }
 
         /* Common styles */
         #chart { width: 100% !important; height: 100% !important; }
@@ -95,13 +95,9 @@
             color: #333; 
             letter-spacing: -0.01em;
         }
-        .percentage { 
-            font-weight: 700; 
+        .weight-text { 
             color: #333; 
             letter-spacing: -0.02em;
-        }
-        .weight-info {
-            color: #888;
         }
         .version {
             position: absolute;
@@ -119,11 +115,11 @@
             <canvas id="chart"></canvas>
         </div>
         <div class="info-section">
-            <div class="percentage" id="percentText">---%</div>
-            <div class="weight-info" id="weightInfo"></div>
+            <div class="weight-text" id="weightText">---g</div>
+            <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.0</div>
+    <div class="version">v4.1</div>
     
     <script>
         window.addEventListener('load', function() {
@@ -145,58 +141,22 @@
             
             // Update displays
             document.getElementById('spoolInfo').textContent = spoolId + (brand ? ' • ' + brand : '');
-            document.getElementById('percentText').textContent = percentage.toFixed(1) + '%';
             
             if (weight) {
-                document.getElementById('weightInfo').textContent = weight + 'g remaining';
+                document.getElementById('weightText').textContent = weight + 'g';
             }
             
             // Adjust cutout based on layout
-            let cutoutPercent = '30%';
-            if (layout === 'chart-only') cutoutPercent = '30%';
-            if (layout === 'dashboard') cutoutPercent = '40%';
+            let baseCutout = 30;
+            if (layout === 'chart-only') baseCutout = 30;
+            if (layout === 'dashboard') baseCutout = 40;
             
             const canvas = document.getElementById('chart');
             const ctx = canvas.getContext('2d');
             
-            // Determine colors and data based on type
-            let chartData, backgroundColors;
-            
-            if (colorType === 'multi' && color1 && color2 && color3) {
-                // Multi-color: Split filled portion into 3 equal segments
-                const segmentSize = percentage / 3;
-                chartData = [segmentSize, segmentSize, segmentSize, remaining];
-                backgroundColors = [
-                    color1.startsWith('#') ? color1 : '#' + color1,
-                    color2.startsWith('#') ? color2 : '#' + color2,
-                    color3.startsWith('#') ? color3 : '#' + color3,
-                    '#F3F4F6'
-                ];
-            } else if (colorType === 'gradient' && color1 && color2) {
-                // Gradient: Create linear gradient
-                const gradient = ctx.createLinearGradient(0, 0, 80, 80);
-                gradient.addColorStop(0, color1.startsWith('#') ? color1 : '#' + color1);
-                gradient.addColorStop(1, color2.startsWith('#') ? color2 : '#' + color2);
-                
-                chartData = [percentage, remaining];
-                backgroundColors = [gradient, '#F3F4F6'];
-            } else {
-                // Solid color (default)
-                const fillColor = color1 ? (color1.startsWith('#') ? color1 : '#' + color1) : '#000000';
-                chartData = [percentage, remaining];
-                backgroundColors = [fillColor, '#F3F4F6'];
-            }
-            
-            new Chart(ctx, {
+            // Chart configuration
+            let chartConfig = {
                 type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: backgroundColors,
-                        borderWidth: 0,
-                        cutout: cutoutPercent
-                    }]
-                },
                 options: {
                     responsive: false,
                     maintainAspectRatio: false,
@@ -206,7 +166,91 @@
                     },
                     animation: { duration: 0 }
                 }
-            });
+            };
+            
+            if (colorType === 'multi' && color1 && color2) {
+                // Concentric Rings: Multiple datasets with different cutouts
+                const datasets = [];
+                
+                // Outer ring (color1)
+                datasets.push({
+                    data: [percentage, remaining],
+                    backgroundColor: [
+                        color1.startsWith('#') ? color1 : '#' + color1,
+                        'transparent'
+                    ],
+                    borderWidth: 0,
+                    cutout: baseCutout + '%'
+                });
+                
+                // Middle ring (color2) 
+                datasets.push({
+                    data: [percentage, remaining],
+                    backgroundColor: [
+                        color2.startsWith('#') ? color2 : '#' + color2,
+                        'transparent'
+                    ],
+                    borderWidth: 0,
+                    cutout: (baseCutout + 15) + '%'
+                });
+                
+                // Inner ring (color3) if available
+                if (color3) {
+                    datasets.push({
+                        data: [percentage, remaining],
+                        backgroundColor: [
+                            color3.startsWith('#') ? color3 : '#' + color3,
+                            'transparent'
+                        ],
+                        borderWidth: 0,
+                        cutout: (baseCutout + 30) + '%'
+                    });
+                }
+                
+                // Background ring
+                datasets.push({
+                    data: [percentage, remaining],
+                    backgroundColor: ['transparent', '#F3F4F6'],
+                    borderWidth: 0,
+                    cutout: baseCutout + '%'
+                });
+                
+                chartConfig.data = { datasets: datasets };
+                
+            } else if (colorType === 'gradient' && color1 && color2) {
+                // 3-Color Gradient
+                const gradient = ctx.createLinearGradient(0, 0, 80, 80);
+                gradient.addColorStop(0, color1.startsWith('#') ? color1 : '#' + color1);
+                if (color3) {
+                    gradient.addColorStop(0.5, color2.startsWith('#') ? color2 : '#' + color2);
+                    gradient.addColorStop(1, color3.startsWith('#') ? color3 : '#' + color3);
+                } else {
+                    gradient.addColorStop(1, color2.startsWith('#') ? color2 : '#' + color2);
+                }
+                
+                chartConfig.data = {
+                    datasets: [{
+                        data: [percentage, remaining],
+                        backgroundColor: [gradient, '#F3F4F6'],
+                        borderWidth: 0,
+                        cutout: baseCutout + '%'
+                    }]
+                };
+                
+            } else {
+                // Solid color (default)
+                const fillColor = color1 ? (color1.startsWith('#') ? color1 : '#' + color1) : '#000000';
+                chartConfig.data = {
+                    datasets: [{
+                        data: [percentage, remaining],
+                        backgroundColor: [fillColor, '#F3F4F6'],
+                        borderWidth: 0,
+                        cutout: baseCutout + '%'
+                    }]
+                };
+            }
+            
+            new Chart(ctx, chartConfig);
         });
     </script>
 </body>
