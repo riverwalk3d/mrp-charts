@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.3 - Fixed Gradient Implementation -->
+    <!-- MRP Chart Component v4.4 - Simplified Gradient -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -118,7 +118,7 @@
             <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.3</div>
+    <div class="version">v4.4</div>
     
     <script>
         window.addEventListener('load', function() {
@@ -127,11 +127,11 @@
             const spoolId = urlParams.get('spool') || 'Unknown';
             const brand = urlParams.get('brand') || '';
             const weight = urlParams.get('weight') || '';
-            const color1 = urlParams.get('color1') || '';  // Primary color
-            const color2 = urlParams.get('color2') || '';  // Secondary color  
-            const color3 = urlParams.get('color3') || '';  // Third color
-            const colorType = urlParams.get('type') || 'solid'; // solid, gradient, multi
-            const layout = urlParams.get('layout') || 'compact'; // Default to compact
+            const color1 = urlParams.get('color1') || '';  
+            const color2 = urlParams.get('color2') || '';  
+            const color3 = urlParams.get('color3') || '';  
+            const colorType = urlParams.get('type') || 'solid';
+            const layout = urlParams.get('layout') || 'compact';
             
             // Apply layout class to body
             document.body.className = 'layout-' + layout;
@@ -153,74 +153,86 @@
             const canvas = document.getElementById('chart');
             const ctx = canvas.getContext('2d');
             
-            // Chart configuration
-            let chartConfig = {
-                type: 'doughnut',
-                options: {
-                    responsive: false,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    },
-                    animation: { duration: 0 }
-                }
-            };
+            let backgroundColor;
             
             if (colorType === 'gradient' && color1 && color2) {
-                // Simple Radial Gradient - Create after canvas is ready
-                setTimeout(() => {
-                    const chartArea = canvas.getBoundingClientRect();
-                    const centerX = canvas.width / 2;
-                    const centerY = canvas.height / 2;
-                    const radius = Math.min(centerX, centerY) * 0.6;
-                    
-                    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-                    
-                    // Create 3-color gradient
-                    const c1 = color1.startsWith('#') ? color1 : '#' + color1;
-                    const c2 = color2.startsWith('#') ? color2 : '#' + color2;
-                    const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : c1;
-                    
-                    gradient.addColorStop(0, c1);
-                    if (color3 && color3.trim()) {
-                        gradient.addColorStop(0.5, c2);
-                        gradient.addColorStop(1, c3);
-                    } else {
-                        gradient.addColorStop(1, c2);
-                    }
-                    
-                    // Update chart with gradient
-                    const chart = Chart.getChart(canvas);
-                    chart.data.datasets[0].backgroundColor[0] = gradient;
-                    chart.update('none');
-                }, 100);
+                // Create gradient segments instead of true gradient
+                const c1 = color1.startsWith('#') ? color1 : '#' + color1;
+                const c2 = color2.startsWith('#') ? color2 : '#' + color2;
+                const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : c2;
                 
-                // Initial chart with solid color
-                const tempColor = color1.startsWith('#') ? color1 : '#' + color1;
-                chartConfig.data = {
-                    datasets: [{
-                        data: [percentage, remaining],
-                        backgroundColor: [tempColor, '#F3F4F6'],
-                        borderWidth: 0,
-                        cutout: baseCutout + '%'
-                    }]
-                };
-                
+                if (color3 && color3.trim()) {
+                    // 3-color segments
+                    const segmentSize = percentage / 3;
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            datasets: [{
+                                data: [segmentSize, segmentSize, segmentSize, remaining],
+                                backgroundColor: [c1, c2, c3, '#F3F4F6'],
+                                borderWidth: 0,
+                                cutout: baseCutout + '%'
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false }
+                            },
+                            animation: { duration: 0 }
+                        }
+                    });
+                } else {
+                    // 2-color segments
+                    const segmentSize = percentage / 2;
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            datasets: [{
+                                data: [segmentSize, segmentSize, remaining],
+                                backgroundColor: [c1, c2, '#F3F4F6'],
+                                borderWidth: 0,
+                                cutout: baseCutout + '%'
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false }
+                            },
+                            animation: { duration: 0 }
+                        }
+                    });
+                }
             } else {
-                // Solid color (default) - keep multi disabled for now
+                // Solid color (default)
                 const fillColor = color1 ? (color1.startsWith('#') ? color1 : '#' + color1) : '#000000';
-                chartConfig.data = {
-                    datasets: [{
-                        data: [percentage, remaining],
-                        backgroundColor: [fillColor, '#F3F4F6'],
-                        borderWidth: 0,
-                        cutout: baseCutout + '%'
-                    }]
-                };
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [percentage, remaining],
+                            backgroundColor: [fillColor, '#F3F4F6'],
+                            borderWidth: 0,
+                            cutout: baseCutout + '%'
+                        }]
+                    },
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        },
+                        animation: { duration: 0 }
+                    }
+                });
             }
-            
-            new Chart(ctx, chartConfig);
         });
     </script>
 </body>
