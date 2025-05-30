@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.9 - Fixed Ring Geometry & Solid Overlays -->
+    <!-- MRP Chart Component v5.2 - Simplified Multi-Color Segments -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -124,10 +124,10 @@
             <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.9</div>
+    <div class="version">v5.2</div>
     
     <script>
-        // Color interpolation function
+        // Color interpolation function (for gradients)
         function interpolateColor(color1, color2, factor) {
             const c1 = hexToRgb(color1);
             const c2 = hexToRgb(color2);
@@ -181,59 +181,36 @@
             const ctx = canvas.getContext('2d');
             
             if (colorType === 'multi' && color1 && color2) {
-                // Concentric Rings - FIXED GEOMETRY
+                // Multi-Color: Distinct segments (co-extruded filament)
                 const c1 = color1.startsWith('#') ? color1 : '#' + color1;
                 const c2 = color2.startsWith('#') ? color2 : '#' + color2;
                 const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : null;
                 
-                const datasets = [];
-                
-                // Calculate EQUAL ring thicknesses
-                const numRings = c3 ? 3 : 2;
-                const totalThickness = 100 - baseCutout;
-                const ringThickness = totalThickness / numRings;
-                
-                // Create rings from INNERMOST to OUTERMOST (Chart.js layering)
+                const data = [];
+                const colors = [];
                 
                 if (c3) {
-                    // Ring 3 (Innermost - Color3)
-                    const innerCutout = baseCutout + (ringThickness * 2);
-                    datasets.push({
-                        data: [100], // Solid ring, no remaining portion
-                        backgroundColor: [c3],
-                        borderWidth: 0,
-                        cutout: innerCutout + '%'
-                    });
+                    // 3-color segments: divide filled portion into 3 equal parts
+                    const segmentSize = percentage / 3;
+                    data.push(segmentSize, segmentSize, segmentSize, remaining);
+                    colors.push(c1, c2, c3, '#F3F4F6');
+                } else {
+                    // 2-color segments: divide filled portion into 2 equal parts
+                    const segmentSize = percentage / 2;
+                    data.push(segmentSize, segmentSize, remaining);
+                    colors.push(c1, c2, '#F3F4F6');
                 }
-                
-                // Ring 2 (Middle - Color2)  
-                const middleCutout = baseCutout + ringThickness;
-                datasets.push({
-                    data: [100], // Solid ring, no remaining portion
-                    backgroundColor: [c2],
-                    borderWidth: 0,
-                    cutout: middleCutout + '%'
-                });
-                
-                // Ring 1 (Outermost - Color1)
-                datasets.push({
-                    data: [100], // Solid ring, no remaining portion
-                    backgroundColor: [c1],
-                    borderWidth: 0,
-                    cutout: baseCutout + '%'
-                });
-                
-                // OVERLAY: Gray "used up" portion on top
-                datasets.push({
-                    data: [remaining, percentage], // Only remaining portion is gray
-                    backgroundColor: ['#F3F4F6', 'transparent'],
-                    borderWidth: 0,
-                    cutout: baseCutout + '%'
-                });
                 
                 new Chart(ctx, {
                     type: 'doughnut',
-                    data: { datasets: datasets },
+                    data: {
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 0,
+                            cutout: baseCutout + '%'
+                        }]
+                    },
                     options: {
                         responsive: false,
                         maintainAspectRatio: false,
@@ -246,7 +223,7 @@
                 });
                 
             } else if (colorType === 'gradient' && color1 && color2) {
-                // Gradient (working from v4.6)
+                // Gradient: Smooth color transitions (gradient filament)
                 const c1 = color1.startsWith('#') ? color1 : '#' + color1;
                 const c2 = color2.startsWith('#') ? color2 : '#' + color2;
                 const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : null;
