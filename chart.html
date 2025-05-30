@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.4 - Simplified Gradient -->
+    <!-- MRP Chart Component v4.5 - Smooth Gradient via Interpolation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -118,9 +118,30 @@
             <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.4</div>
+    <div class="version">v4.5</div>
     
     <script>
+        // Color interpolation function
+        function interpolateColor(color1, color2, factor) {
+            const c1 = hexToRgb(color1);
+            const c2 = hexToRgb(color2);
+            
+            const r = Math.round(c1.r + (c2.r - c1.r) * factor);
+            const g = Math.round(c1.g + (c2.g - c1.g) * factor);
+            const b = Math.round(c1.b + (c2.b - c1.b) * factor);
+            
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+        
         window.addEventListener('load', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const percentage = parseFloat(urlParams.get('percent')) || 0;
@@ -153,61 +174,65 @@
             const canvas = document.getElementById('chart');
             const ctx = canvas.getContext('2d');
             
-            let backgroundColor;
-            
             if (colorType === 'gradient' && color1 && color2) {
-                // Create gradient segments instead of true gradient
+                // Create smooth gradient using many small segments
                 const c1 = color1.startsWith('#') ? color1 : '#' + color1;
                 const c2 = color2.startsWith('#') ? color2 : '#' + color2;
                 const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : c2;
                 
-                if (color3 && color3.trim()) {
-                    // 3-color segments
-                    const segmentSize = percentage / 3;
-                    new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            datasets: [{
-                                data: [segmentSize, segmentSize, segmentSize, remaining],
-                                backgroundColor: [c1, c2, c3, '#F3F4F6'],
-                                borderWidth: 0,
-                                cutout: baseCutout + '%'
-                            }]
-                        },
-                        options: {
-                            responsive: false,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: { enabled: false }
-                            },
-                            animation: { duration: 0 }
+                const numSegments = 30; // Create 30 segments for smooth gradient
+                const segmentSize = percentage / numSegments;
+                const data = [];
+                const colors = [];
+                
+                for (let i = 0; i < numSegments; i++) {
+                    data.push(segmentSize);
+                    
+                    let color;
+                    if (color3 && color3.trim()) {
+                        // 3-color gradient
+                        if (i < numSegments / 2) {
+                            // First half: color1 to color2
+                            const factor = (i / (numSegments / 2));
+                            color = interpolateColor(c1, c2, factor);
+                        } else {
+                            // Second half: color2 to color3
+                            const factor = ((i - numSegments / 2) / (numSegments / 2));
+                            color = interpolateColor(c2, c3, factor);
                         }
-                    });
-                } else {
-                    // 2-color segments
-                    const segmentSize = percentage / 2;
-                    new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            datasets: [{
-                                data: [segmentSize, segmentSize, remaining],
-                                backgroundColor: [c1, c2, '#F3F4F6'],
-                                borderWidth: 0,
-                                cutout: baseCutout + '%'
-                            }]
-                        },
-                        options: {
-                            responsive: false,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: { enabled: false }
-                            },
-                            animation: { duration: 0 }
-                        }
-                    });
+                    } else {
+                        // 2-color gradient
+                        const factor = i / (numSegments - 1);
+                        color = interpolateColor(c1, c2, factor);
+                    }
+                    colors.push(color);
                 }
+                
+                // Add remaining portion
+                data.push(remaining);
+                colors.push('#F3F4F6');
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 0,
+                            cutout: baseCutout + '%'
+                        }]
+                    },
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        },
+                        animation: { duration: 0 }
+                    }
+                });
+                
             } else {
                 // Solid color (default)
                 const fillColor = color1 ? (color1.startsWith('#') ? color1 : '#' + color1) : '#000000';
