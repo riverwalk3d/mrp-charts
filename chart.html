@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- MRP Chart Component v4.2 - Fixed Gradients & Ring Thickness -->
+    <!-- MRP Chart Component v4.3 - Fixed Gradient Implementation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body { 
@@ -118,7 +118,7 @@
             <div class="remaining-text">REMAINING</div>
         </div>
     </div>
-    <div class="version">v4.2</div>
+    <div class="version">v4.3</div>
     
     <script>
         window.addEventListener('load', function() {
@@ -167,84 +167,48 @@
                 }
             };
             
-            if (colorType === 'multi' && color1 && color2) {
-                // Concentric Rings: Multiple datasets with proper thickness
-                const datasets = [];
-                const ringThickness = (100 - baseCutout) / (color3 ? 3 : 2); // Divide available space equally
+            if (colorType === 'gradient' && color1 && color2) {
+                // Simple Radial Gradient - Create after canvas is ready
+                setTimeout(() => {
+                    const chartArea = canvas.getBoundingClientRect();
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    const radius = Math.min(centerX, centerY) * 0.6;
+                    
+                    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                    
+                    // Create 3-color gradient
+                    const c1 = color1.startsWith('#') ? color1 : '#' + color1;
+                    const c2 = color2.startsWith('#') ? color2 : '#' + color2;
+                    const c3 = color3 && color3.trim() ? (color3.startsWith('#') ? color3 : '#' + color3) : c1;
+                    
+                    gradient.addColorStop(0, c1);
+                    if (color3 && color3.trim()) {
+                        gradient.addColorStop(0.5, c2);
+                        gradient.addColorStop(1, c3);
+                    } else {
+                        gradient.addColorStop(1, c2);
+                    }
+                    
+                    // Update chart with gradient
+                    const chart = Chart.getChart(canvas);
+                    chart.data.datasets[0].backgroundColor[0] = gradient;
+                    chart.update('none');
+                }, 100);
                 
-                // Background ring first (shows remaining portion)
-                datasets.push({
-                    data: [percentage, remaining],
-                    backgroundColor: ['transparent', '#F3F4F6'],
-                    borderWidth: 0,
-                    cutout: baseCutout + '%'
-                });
-                
-                // Outer ring (color1)
-                datasets.push({
-                    data: [percentage, remaining],
-                    backgroundColor: [
-                        color1.startsWith('#') ? color1 : '#' + color1,
-                        'transparent'
-                    ],
-                    borderWidth: 0,
-                    cutout: baseCutout + '%'
-                });
-                
-                // Middle ring (color2) 
-                datasets.push({
-                    data: [percentage, remaining],
-                    backgroundColor: [
-                        color2.startsWith('#') ? color2 : '#' + color2,
-                        'transparent'
-                    ],
-                    borderWidth: 0,
-                    cutout: (baseCutout + ringThickness) + '%'
-                });
-                
-                // Inner ring (color3) if available
-                if (color3) {
-                    datasets.push({
-                        data: [percentage, remaining],
-                        backgroundColor: [
-                            color3.startsWith('#') ? color3 : '#' + color3,
-                            'transparent'
-                        ],
-                        borderWidth: 0,
-                        cutout: (baseCutout + ringThickness * 2) + '%'
-                    });
-                }
-                
-                chartConfig.data = { datasets: datasets };
-                
-            } else if (colorType === 'gradient' && color1 && color2) {
-                // Conic Gradient (circular gradient following doughnut)
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const radius = Math.min(centerX, centerY) * 0.8;
-                
-                const gradient = ctx.createConicGradient(0, centerX, centerY);
-                gradient.addColorStop(0, color1.startsWith('#') ? color1 : '#' + color1);
-                if (color3) {
-                    gradient.addColorStop(0.33, color2.startsWith('#') ? color2 : '#' + color2);
-                    gradient.addColorStop(0.66, color3.startsWith('#') ? color3 : '#' + color3);
-                    gradient.addColorStop(1, color1.startsWith('#') ? color1 : '#' + color1);
-                } else {
-                    gradient.addColorStop(0.5, color2.startsWith('#') ? color2 : '#' + color2);
-                    gradient.addColorStop(1, color1.startsWith('#') ? color1 : '#' + color1);
-                }
-                
+                // Initial chart with solid color
+                const tempColor = color1.startsWith('#') ? color1 : '#' + color1;
                 chartConfig.data = {
                     datasets: [{
                         data: [percentage, remaining],
-                        backgroundColor: [gradient, '#F3F4F6'],
+                        backgroundColor: [tempColor, '#F3F4F6'],
                         borderWidth: 0,
                         cutout: baseCutout + '%'
                     }]
                 };
                 
             } else {
-                // Solid color (default)
+                // Solid color (default) - keep multi disabled for now
                 const fillColor = color1 ? (color1.startsWith('#') ? color1 : '#' + color1) : '#000000';
                 chartConfig.data = {
                     datasets: [{
